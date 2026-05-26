@@ -33,13 +33,13 @@ class SinhvienPage(tk.Frame):
         super().__init__(master)
         self.app = app
         self.sv = SinhvienModel("data/sinhvien.csv", SV_COLS)
-        self._build()
+        self._view()
         self.load_data()
         self.pack(fill="both", expand=True)
 
     # ── Giao diện chính ───────────────────────────────────────────────────────
 
-    def _build(self):
+    def _view(self):
         toolbar = tk.Frame(self, bd=1, relief="raised", pady=4)
         toolbar.pack(fill="x")
 

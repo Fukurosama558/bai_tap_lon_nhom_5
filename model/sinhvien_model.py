@@ -9,7 +9,7 @@ class SinhvienModel:
         self.columns = columns  # danh sách cột cần dùng
 
     def _load(self):
-        df = pd.read_csv(self.file_path, dtype=str)
+        df = pd.read_csv(self.file_path, dtype=str).fillna("")
         if self.columns:
             df = df[[c for c in self.columns if c in df.columns]]
         return df
