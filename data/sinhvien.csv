@@ -1,1 +1,6 @@
-id,hoten,sdt,diachi,lop,tuoi
+id,masv,hoten,sdt,diachi,lop,tuoi,gioi_tinh,ghi_chu
+1,SV001,Pham Thi D,901234567,321 Phan Boi Chau,12A4,19,Nam,
+2,SV002,dsa,dá,dsa,dsa,dá,,
+3,SV003,dsa,dá,dsa,dsa,21,,
+5,SV004,dsa,dá,dsa,dsa,dá,,
+6,1111,1111,,,11,,,

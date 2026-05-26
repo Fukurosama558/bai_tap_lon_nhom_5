@@ -1,205 +1,228 @@
 import tkinter as tk
-from tkinter import messagebox, ttk
-from model.sinhvien import SinhvienModel
-from theme import Theme
+from tkinter import ttk, messagebox
+from model.sinhvien_model import SinhvienModel
+
+# Tất cả cột trong CSV (id dùng nội bộ, không hiển thị)
+SV_COLS = ['id', 'masv', 'hoten', 'sdt', 'diachi', 'lop', 'tuoi', 'gioi_tinh', 'ghi_chu']
+
+# Cột hiển thị (bỏ 'id')
+DISPLAY_COLS = ['masv', 'hoten', 'sdt', 'diachi', 'lop', 'tuoi', 'gioi_tinh', 'ghi_chu']
+DISPLAY_HEADS = {
+    'masv': 'Mã SV', 'hoten': 'Họ tên', 'sdt': 'SĐT',
+    'diachi': 'Địa chỉ', 'lop': 'Lớp', 'tuoi': 'Tuổi', 'gioi_tinh': 'Giới tính', 'ghi_chu': 'Ghi chú'
+}
+COL_W = {
+    'masv': 90, 'hoten': 180, 'sdt': 120,
+    'diachi': 180, 'lop': 90, 'tuoi': 65, 'gioi_tinh': 80, 'ghi_chu': 120
+}
+
+FORM_FIELDS = [
+    ("Mã sinh viên *", "masv"),
+    ("Họ tên *",       "hoten"),
+    ("Số điện thoại",  "sdt"),
+    ("Địa chỉ",        "diachi"),
+    ("Lớp *",          "lop"),
+    ("Tuổi",           "tuoi"),
+    ("Giới tính",      "gioi_tinh"),
+    ("Ghi chú",        "ghi_chu"),
+]
 
 
-class SinhvienPage:
-    def __init__(self, master, app_manager):
-        self.master = master
-        self.app_manager = app_manager
-        self.sv = SinhvienModel("data/sinhvien.csv",
-                                ['id','hoten','sdt','diachi','lop','tuoi'])
-        self._hovered = None
-        self.config()
-        self.view()
+class SinhvienPage(tk.Frame):
+    def __init__(self, master, app):
+        super().__init__(master)
+        self.app = app
+        self.sv = SinhvienModel("data/sinhvien.csv", SV_COLS)
+        self._build()
         self.load_data()
+        self.pack(fill="both", expand=True)
 
-    def config(self):
-        self.master.title("Quản lý Sinh viên – Trường Đại học Hạ Long")
-        self.master.geometry("1100x600")
-        self.master.minsize(800, 500)
-        self.master.resizable(True, True)
-        self.master.configure(bg=Theme.BG)
+    # ── Giao diện chính ───────────────────────────────────────────────────────
 
-    def view(self):
-        self._build_header()
-        self._build_toolbar()
-        self._build_table()
-        self._build_statusbar()
+    def _build(self):
+        toolbar = tk.Frame(self, bd=1, relief="raised", pady=4)
+        toolbar.pack(fill="x")
 
-    def _build_header(self):
-        Theme.build_header(self.master, "Danh sách Sinh viên")
+        tk.Label(toolbar, text="Thông tin Sinh viên",
+                 font=("Arial", 14, "bold")).pack(side="left", padx=10)
 
-    def _build_toolbar(self):
-        bar = tk.Frame(self.master, bg=Theme.WHITE,
-                       highlightbackground=Theme.BORDER,
-                       highlightthickness=1)
-        bar.pack(fill="x")
-
-        left = tk.Frame(bar, bg=Theme.WHITE)
-        left.pack(side="left", padx=14, pady=9)
-
-        self.count_var = tk.StringVar(value="0 sinh viên")
-        tk.Label(left, textvariable=self.count_var,
-                 font=(Theme.FONT, 9, "bold"),
-                 bg=Theme.PRIMARY_LIGHT, fg=Theme.WHITE,
-                 padx=10, pady=4).pack(side="left", padx=(0, 10))
-
-        Theme.make_btn(left, "＋  Thêm sinh viên",
-                       self.create_sv, "primary").pack(side="left", padx=3)
-        Theme.make_btn(left, "⟳  Làm mới",
-                       self.load_data, "outline").pack(side="left", padx=3)
+        for txt, cmd in [("➕ Thêm", lambda: self._open_form()),
+                         ("🔄 Làm mới", self.load_data)]:
+            tk.Button(toolbar, text=txt, command=cmd).pack(side="left", padx=4)
 
         # Tìm kiếm
-        sf = tk.Frame(bar, bg=Theme.WHITE)
-        sf.pack(side="right", padx=14, pady=9)
-        sw = tk.Frame(sf, bg=Theme.BG,
-                      highlightbackground=Theme.BORDER,
-                      highlightthickness=1)
-        sw.pack()
-        tk.Label(sw, text="🔍", bg=Theme.BG,
-                 fg=Theme.TEXT_LIGHT,
-                 font=(Theme.FONT, 11)).pack(side="left", padx=(8, 0))
+        tk.Label(toolbar, text="Tìm:").pack(side="left", padx=(20, 2))
+        self.search_field = ttk.Combobox(
+            toolbar, values=list(DISPLAY_HEADS.values()), width=10, state="readonly")
+        self.search_field.current(1)   # mặc định: Họ tên
+        self.search_field.pack(side="left")
         self.search_var = tk.StringVar()
-        self.search_var.trace("w", self._on_search)
-        se = tk.Entry(sw, textvariable=self.search_var,
-                      font=(Theme.FONT, 10),
-                      relief="flat", bd=0,
-                      bg=Theme.BG, fg=Theme.TEXT_DARK,
-                      insertbackground=Theme.PRIMARY, width=22)
-        se.pack(side="left", padx=8, ipady=6)
-        se.bind("<FocusIn>",
-                lambda e: sw.configure(highlightbackground=Theme.PRIMARY,
-                                       highlightthickness=2))
-        se.bind("<FocusOut>",
-                lambda e: sw.configure(highlightbackground=Theme.BORDER,
-                                       highlightthickness=1))
+        tk.Entry(toolbar, textvariable=self.search_var, width=18).pack(side="left", padx=4)
+        tk.Button(toolbar, text="🔍", command=self._search).pack(side="left")
 
-    def _build_table(self):
-        outer = tk.Frame(self.master, bg=Theme.BG)
-        outer.pack(expand=True, fill="both", padx=18, pady=(10, 0))
+        tk.Button(toolbar, text="📥 Import CSV", command=self._import_csv).pack(side="right", padx=4)
+        tk.Button(toolbar, text="📤 Export CSV", command=self._export_csv).pack(side="right", padx=4)
+        tk.Button(toolbar, text="ℹ️ About",       command=self._about).pack(side="right", padx=4)
 
-        sn = Theme.apply_treeview_style("SV.Treeview")
-        cols = ("STT","hoten","sdt","diachi","lop","tuoi","Sửa","Xóa")
-        self.tree = ttk.Treeview(outer, columns=cols,
-                                 show="headings", height=15,
-                                 style=sn, selectmode="browse")
+        # Treeview
+        tree_frame = tk.Frame(self)
+        tree_frame.pack(fill="both", expand=True, padx=10, pady=6)
 
-        specs = [
-            ("STT",   "STT",          55,  "center"),
-            ("hoten", "Họ và tên",   210,  "w"),
-            ("sdt",   "Số ĐT",       130,  "center"),
-            ("diachi","Địa chỉ",     200,  "w"),
-            ("lop",   "Lớp",         100,  "center"),
-            ("tuoi",  "Tuổi",         70,  "center"),
-            ("Sửa",   "",             72,  "center"),
-            ("Xóa",   "",             72,  "center"),
-        ]
-        for col, label, width, anchor in specs:
-            self.tree.heading(col, text=label)
-            self.tree.column(col, width=width, anchor=anchor, minwidth=width)
+        tree_cols = DISPLAY_COLS + ["sua", "xoa"]
+        self.tree = ttk.Treeview(tree_frame, columns=tree_cols, show="headings", height=15)
 
-        self.tree.tag_configure("even", background=Theme.WHITE,
-                                foreground=Theme.TEXT_DARK)
-        self.tree.tag_configure("odd",  background=Theme.ROW_ALT,
-                                foreground=Theme.TEXT_DARK)
-        self.tree.tag_configure("hover",background=Theme.ROW_HOVER,
-                                foreground=Theme.TEXT_DARK)
+        for c in DISPLAY_COLS:
+            self.tree.heading(c, text=DISPLAY_HEADS[c])
+            self.tree.column(c, width=COL_W[c], anchor="center")
+        self.tree.heading("sua", text="Sửa")
+        self.tree.column("sua", width=60, anchor="center")
+        self.tree.heading("xoa", text="Xóa")
+        self.tree.column("xoa", width=60, anchor="center")
 
-        self.tree.bind("<ButtonRelease-1>", self._on_tree_click)
-        self.tree.bind("<Motion>",          self._on_hover)
-        self.tree.bind("<Leave>",           self._on_leave)
+        sb = ttk.Scrollbar(tree_frame, orient="vertical", command=self.tree.yview)
+        self.tree.configure(yscrollcommand=sb.set)
+        self.tree.pack(side="left", fill="both", expand=True)
+        sb.pack(side="right", fill="y")
 
-        vsb = ttk.Scrollbar(outer, orient="vertical",
-                            command=self.tree.yview)
-        self.tree.configure(yscrollcommand=vsb.set)
-        self.tree.grid(row=0, column=0, sticky="nsew")
-        vsb.grid(row=0, column=1, sticky="ns")
-        outer.grid_rowconfigure(0, weight=1)
-        outer.grid_columnconfigure(0, weight=1)
+        self.tree.bind("<ButtonRelease-1>", self._on_click)
 
-    def _build_statusbar(self):
-        self.status_var = tk.StringVar(value="Sẵn sàng")
-        Theme.build_statusbar(self.master, self.status_var)
+        self.status = tk.Label(self, text="", relief="sunken", anchor="w")
+        self.status.pack(fill="x", side="bottom")
 
-    # ── Dữ liệu ────────────────────────────────────────────────────
-    def load_data(self):
-        for r in self.tree.get_children():
-            self.tree.delete(r)
-        data = self.sv.list(1, 10000)
-        self._all_data = data["data"]
-        self._render(self._all_data)
+    # ── Dữ liệu ──────────────────────────────────────────────────────────────
 
-    def _render(self, rows):
-        for r in self.tree.get_children():
-            self.tree.delete(r)
-        for i, item in enumerate(rows, start=1):
-            tag = "even" if i % 2 == 0 else "odd"
-            self.tree.insert("", "end",
-                             values=(item["id"],
-                                     item["hoten"], item["sdt"],
-                                     item["diachi"], item["lop"],
-                                     item["tuoi"],
-                                     "✏️  Sửa", "🗑️  Xóa"),
-                             tags=(tag,))
-        self.count_var.set(f"{len(rows)} sinh viên")
-        self.status_var.set(f"Hiển thị {len(rows)} sinh viên")
+    def load_data(self, records=None):
+        for row in self.tree.get_children():
+            self.tree.delete(row)
+        data = records if records is not None else self.sv.list_all()
+        for r in data:
+            # Lưu id vào iid của treeview để dùng nội bộ, không hiển thị
+            self.tree.insert("", "end", iid=str(r.get("id", "")), values=(
+                r.get("masv", ""), r.get("hoten", ""), r.get("sdt", ""),
+                r.get("diachi", ""), r.get("lop", ""), r.get("tuoi", ""),
+                r.get("gioi_tinh", ""), r.get("ghi_chu", ""),
+                "✏️ Sửa", "🗑️ Xóa"
+            ))
+        self.status.config(text=f"Tổng: {len(data)} sinh viên")
 
-    # ── Sự kiện ────────────────────────────────────────────────────
-    def _on_search(self, *_):
-        kw = self.search_var.get().lower().strip()
-        filtered = self._all_data if not kw else [
-            r for r in self._all_data
-            if any(kw in str(v).lower() for v in r.values())
-        ]
-        self._render(filtered)
-
-    def _on_tree_click(self, event):
-        if self.tree.identify_region(event.x, event.y) != "cell":
+    def _on_click(self, event):
+        region = self.tree.identify_region(event.x, event.y)
+        if region != "cell":
             return
-        col_idx = int(self.tree.identify_column(event.x).replace("#","")) - 1
-        row_id  = self.tree.identify_row(event.y)
-        if not row_id:
+        col = self.tree.identify_column(event.x)
+        row = self.tree.identify_row(event.y)
+        if not row:
             return
-        col_name = ("STT","hoten","sdt","diachi","lop","tuoi","Sửa","Xóa")[col_idx]
-        vals = self.tree.item(row_id)["values"]
-        sv_id = str(vals[0])
+        col_idx = int(col.replace("#", "")) - 1
+        all_cols = DISPLAY_COLS + ["sua", "xoa"]
+        col_name = all_cols[col_idx] if col_idx < len(all_cols) else ""
 
-        if col_name == "Sửa":
-            self.app_manager.show_sua_sinhvien_page(sv_id)
-        elif col_name == "Xóa":
-            if messagebox.askyesno("Xác nhận xóa",
-                                   f"Xóa sinh viên «{vals[1]}»?",
-                                   icon="warning"):
-                self.sv.delete("id", sv_id)
-                self.tree.delete(row_id)
-                self._all_data = [r for r in self._all_data
-                                  if str(r["id"]) != sv_id]
-                self.count_var.set(
-                    f"{len(self.tree.get_children())} sinh viên")
-                self.status_var.set(f"Đã xóa: {vals[1]}")
+        # row chính là id (vì dùng iid=id khi insert)
+        id_val = row
 
-    def _on_hover(self, event):
-        row_id = self.tree.identify_row(event.y)
-        if row_id != self._hovered:
-            if self._hovered:
-                tags = tuple(t for t in
-                             self.tree.item(self._hovered,"tags")
-                             if t != "hover")
-                self.tree.item(self._hovered, tags=tags)
-            if row_id:
-                self.tree.item(row_id,
-                               tags=self.tree.item(row_id,"tags")+("hover",))
-            self._hovered = row_id
+        if col_name == "sua":
+            rec = self.sv.get_by_id(id_val)
+            if rec:
+                self._open_form(rec)
+        elif col_name == "xoa":
+            if messagebox.askyesno("Xác nhận", "Xóa sinh viên này?"):
+                self.sv.delete(id_val)
+                self.tree.delete(row)
+                self.status.config(text="Đã xóa sinh viên.")
 
-    def _on_leave(self, _):
-        if self._hovered:
-            tags = tuple(t for t in
-                         self.tree.item(self._hovered,"tags")
-                         if t != "hover")
-            self.tree.item(self._hovered, tags=tags)
-            self._hovered = None
+    # ── Form Thêm / Sửa (popup giống trang điểm) ─────────────────────────────
 
-    def create_sv(self):
-        self.app_manager.show_them_sinhvien_page()
+    def _open_form(self, data=None):
+        is_edit = data is not None
+        win = tk.Toplevel(self)
+        win.title("Sửa thông tin sinh viên" if is_edit else "Thêm sinh viên mới")
+        win.geometry("420x310")
+        win.resizable(False, False)
+        win.grab_set()
+
+        tk.Label(win, text="Sửa thông tin sinh viên" if is_edit else "Thêm sinh viên mới",
+                 font=("Arial", 12, "bold")).grid(row=0, column=0, columnspan=2, pady=10)
+
+        entries = {}
+        for i, (label, key) in enumerate(FORM_FIELDS):
+            tk.Label(win, text=label, anchor="w").grid(
+                row=i + 1, column=0, sticky="w", padx=14, pady=3)
+            e = tk.Entry(win, width=28)
+            e.grid(row=i + 1, column=1, padx=10, pady=3, sticky="w")
+            if data:
+                e.insert(0, data.get(key, ""))
+            entries[key] = e
+
+        def _luu():
+            masv  = entries["masv"].get().strip()
+            hoten = entries["hoten"].get().strip()
+            lop   = entries["lop"].get().strip()
+            tuoi  = entries["tuoi"].get().strip()
+
+            if not masv:
+                messagebox.showwarning("Lỗi", "Vui lòng nhập Mã sinh viên!", parent=win)
+                return
+            if not hoten:
+                messagebox.showwarning("Lỗi", "Vui lòng nhập Họ tên!", parent=win)
+                return
+            if not lop:
+                messagebox.showwarning("Lỗi", "Vui lòng nhập Lớp!", parent=win)
+                return
+            if tuoi and not tuoi.isdigit():
+                messagebox.showwarning("Lỗi", "Tuổi phải là số nguyên!", parent=win)
+                return
+
+            record = {k: entries[k].get().strip() for _, k in FORM_FIELDS}
+
+            if is_edit:
+                self.sv.update(data["id"], record)
+            else:
+                record["id"] = self.sv.get_next_id()
+                self.sv.create(record)
+
+            win.destroy()
+            self.load_data()
+
+        btn_row = len(FORM_FIELDS) + 1
+        btn_frame = tk.Frame(win)
+        btn_frame.grid(row=btn_row, column=0, columnspan=2, pady=12)
+        tk.Button(btn_frame, text="💾 Lưu",  command=_luu,        width=12).pack(side="left", padx=6)
+        tk.Button(btn_frame, text="❌ Hủy",  command=win.destroy, width=12).pack(side="left", padx=6)
+
+    # ── Tiện ích ──────────────────────────────────────────────────────────────
+
+    def _search(self):
+        kw = self.search_var.get().strip()
+        if not kw:
+            self.load_data()
+            return
+        field_map = {v: k for k, v in DISPLAY_HEADS.items()}
+        col = field_map.get(self.search_field.get(), "hoten")
+        result = self.sv.search(col, kw)
+        self.load_data(result)
+        self.status.config(text=f"Tìm thấy {len(result)} kết quả cho '{kw}'")
+
+    def _import_csv(self):
+        from tkinter import filedialog
+        import shutil
+        path = filedialog.askopenfilename(filetypes=[("CSV files", "*.csv")])
+        if path:
+            shutil.copy(path, "data/sinhvien.csv")
+            self.load_data()
+            messagebox.showinfo("Import", "Import CSV thành công!")
+
+    def _export_csv(self):
+        from tkinter import filedialog
+        import shutil
+        path = filedialog.asksaveasfilename(defaultextension=".csv",
+                                            filetypes=[("CSV files", "*.csv")])
+        if path:
+            shutil.copy("data/sinhvien.csv", path)
+            messagebox.showinfo("Export", f"Đã xuất ra:\n{path}")
+
+    def _about(self):
+        messagebox.showinfo("About",
+            "Phần mềm Quản lý Sinh viên ĐHHL\n"
+            "Phiên bản: 1.0\n"
+            "Nhóm: ...\n"
+            "Ngày phát hành: 2025")
