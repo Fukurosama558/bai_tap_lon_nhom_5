@@ -1,19 +1,20 @@
+from datetime import datetime
 import tkinter as tk
 from tkinter import ttk, messagebox
 from model.sinhvien_model import SinhvienModel
 
 # Tất cả cột trong CSV (id dùng nội bộ, không hiển thị)
-SV_COLS = ['id', 'masv', 'hoten', 'sdt', 'diachi', 'lop', 'tuoi', 'gioi_tinh', 'ghi_chu']
+SV_COLS = ['id', 'masv', 'hoten', 'sdt', 'diachi', 'lop', 'ngay_sinh', 'gioi_tinh', 'ghi_chu']
 
 # Cột hiển thị (bỏ 'id')
-DISPLAY_COLS = ['masv', 'hoten', 'sdt', 'diachi', 'lop', 'tuoi', 'gioi_tinh', 'ghi_chu']
+DISPLAY_COLS = ['STT','masv', 'hoten', 'sdt', 'diachi', 'lop', 'ngay_sinh', 'gioi_tinh', 'ghi_chu']
 DISPLAY_HEADS = {
-    'masv': 'Mã SV', 'hoten': 'Họ tên', 'sdt': 'SĐT',
-    'diachi': 'Địa chỉ', 'lop': 'Lớp', 'tuoi': 'Tuổi', 'gioi_tinh': 'Giới tính', 'ghi_chu': 'Ghi chú'
+    'STT': 'STT', 'masv': 'Mã SV', 'hoten': 'Họ tên', 'sdt': 'SĐT',
+    'diachi': 'Địa chỉ', 'lop': 'Lớp', 'ngay_sinh': 'Ngày sinh', 'gioi_tinh': 'Giới tính', 'ghi_chu': 'Ghi chú'
 }
 COL_W = {
-    'masv': 90, 'hoten': 180, 'sdt': 120,
-    'diachi': 180, 'lop': 90, 'tuoi': 65, 'gioi_tinh': 80, 'ghi_chu': 120
+    'STT': 50, 'masv': 90, 'hoten': 180, 'sdt': 120,
+    'diachi': 180, 'lop': 90, 'ngay_sinh': 100, 'gioi_tinh': 80, 'ghi_chu': 120
 }
 
 FORM_FIELDS = [
@@ -22,8 +23,8 @@ FORM_FIELDS = [
     ("Số điện thoại",  "sdt"),
     ("Địa chỉ",        "diachi"),
     ("Lớp *",          "lop"),
-    ("Tuổi",           "tuoi"),
-    ("Giới tính",      "gioi_tinh"),
+    ("Ngày sinh *",      "ngay_sinh"),
+    ("Giới tính *",      "gioi_tinh"),
     ("Ghi chú",        "ghi_chu"),
 ]
 
@@ -95,11 +96,13 @@ class SinhvienPage(tk.Frame):
         for row in self.tree.get_children():
             self.tree.delete(row)
         data = records if records is not None else self.sv.list_all()
+        i = 0
         for r in data:
+            i += 1
             # Lưu id vào iid của treeview để dùng nội bộ, không hiển thị
             self.tree.insert("", "end", iid=str(r.get("id", "")), values=(
-                r.get("masv", ""), r.get("hoten", ""), r.get("sdt", ""),
-                r.get("diachi", ""), r.get("lop", ""), r.get("tuoi", ""),
+                i, r.get("masv", ""), r.get("hoten", ""), r.get("sdt", ""),
+                r.get("diachi", ""), r.get("lop", ""), r.get("ngay_sinh", ""),
                 r.get("gioi_tinh", ""), r.get("ghi_chu", ""),
                 "✏️ Sửa", "🗑️ Xóa"
             ))
@@ -136,10 +139,9 @@ class SinhvienPage(tk.Frame):
         is_edit = data is not None
         win = tk.Toplevel(self)
         win.title("Sửa thông tin sinh viên" if is_edit else "Thêm sinh viên mới")
-        win.geometry("420x310")
+        win.geometry("420x460")
         win.resizable(False, False)
         win.grab_set()
-
         tk.Label(win, text="Sửa thông tin sinh viên" if is_edit else "Thêm sinh viên mới",
                  font=("Arial", 12, "bold")).grid(row=0, column=0, columnspan=2, pady=10)
 
@@ -157,7 +159,8 @@ class SinhvienPage(tk.Frame):
             masv  = entries["masv"].get().strip()
             hoten = entries["hoten"].get().strip()
             lop   = entries["lop"].get().strip()
-            tuoi  = entries["tuoi"].get().strip()
+            ngay_sinh  = entries["ngay_sinh"].get().strip()
+            gioi_tinh = entries["gioi_tinh"].get().strip()
 
             if not masv:
                 messagebox.showwarning("Lỗi", "Vui lòng nhập Mã sinh viên!", parent=win)
@@ -168,10 +171,16 @@ class SinhvienPage(tk.Frame):
             if not lop:
                 messagebox.showwarning("Lỗi", "Vui lòng nhập Lớp!", parent=win)
                 return
-            if tuoi and not tuoi.isdigit():
-                messagebox.showwarning("Lỗi", "Tuổi phải là số nguyên!", parent=win)
+            if not ngay_sinh or ngay_sinh:
+                try:
+                    datetime.strptime(ngay_sinh, "%d/%m/%Y")
+                except ValueError:
+                    messagebox.showwarning("Lỗi", "Ngày sinh không hợp lệ! (dd/mm/yyyy)", parent=win)
+                    return
+            if not gioi_tinh or ( gioi_tinh.lower() not in ["nam", "nữ", "khác"] ):
+                messagebox.showwarning("Lỗi", "Giới tính phải là Nam, Nữ hoặc Khác!", parent=win)
                 return
-
+            
             record = {k: entries[k].get().strip() for _, k in FORM_FIELDS}
 
             if is_edit:
@@ -183,9 +192,18 @@ class SinhvienPage(tk.Frame):
             win.destroy()
             self.load_data()
 
-        btn_row = len(FORM_FIELDS) + 1
+        current_row = len(FORM_FIELDS) + 1
+        instruction_text = (
+            "'*' là trường bắt buộc\n"
+            "ngày sinh định dạng dd/mm/yyyy\n"
+            "giới tính: Nam, Nữ hoặc Khác"
+        )
+        instruction_label = tk.Label(win, text=instruction_text, justify="left", fg="gray")
+        instruction_label.grid(row=len(FORM_FIELDS) + 1, column=0, columnspan=2, padx=14, pady=10, sticky="w")
+
+        btn_row = len(FORM_FIELDS) + 2
         btn_frame = tk.Frame(win)
-        btn_frame.grid(row=btn_row, column=0, columnspan=2, pady=12)
+        btn_frame.grid(row=btn_row, column=0, columnspan=2, pady=15)
         tk.Button(btn_frame, text="💾 Lưu",  command=_luu,        width=12).pack(side="left", padx=6)
         tk.Button(btn_frame, text="❌ Hủy",  command=win.destroy, width=12).pack(side="left", padx=6)
 
