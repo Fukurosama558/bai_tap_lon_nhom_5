@@ -8,11 +8,11 @@ class ThongKePage(tk.Frame):
     def __init__(self, master, app):
         super().__init__(master)
         self.app = app
-        self._build()
+        self._view()
         self.load_data()
         self.pack(fill="both", expand=True)
 
-    def _build(self):
+    def _view(self):
         toolbar = tk.Frame(self, bd=1, relief="raised", pady=4)
         toolbar.pack(fill="x")
         tk.Label(toolbar, text="Thống kê - Báo cáo",

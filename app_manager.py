@@ -6,7 +6,7 @@ class AppManager:
     def __init__(self):
         self.root = tk.Tk()
         self.root.title("Quản lý Sinh viên - Đại học Hạ Long")
-        self.root.geometry("1050x580")
+        self.root.geometry("1150x580")
         self.root.resizable(True, True)
 
         self._current_frame = None
