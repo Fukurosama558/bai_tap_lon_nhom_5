@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import ttk
 import numpy as np
 import pandas as pd
+from datetime import datetime
 
 
 class ThongKePage(tk.Frame):
@@ -103,12 +104,30 @@ class ThongKePage(tk.Frame):
             total_sv = len(df_sv)
             self.sv_labels["tong_sv"].config(text=str(total_sv))
 
-            if "tuoi" in df_sv.columns:
-                tuoi = pd.to_numeric(df_sv["tuoi"], errors="coerce").dropna()
+            if "ngay_sinh" in df_sv.columns:
+                today = datetime.today()
+
+                def _tinh_tuoi(ns):
+                    try:
+                        bd = datetime.strptime(str(ns).strip(), "%d/%m/%Y")
+                        age = today.year - bd.year - (
+                            (today.month, today.day) < (bd.month, bd.day)
+                        )
+                        return age if 1 <= age <= 120 else np.nan
+                    except Exception:
+                        return np.nan
+
+                tuoi = pd.to_numeric(
+                    df_sv["ngay_sinh"].map(_tinh_tuoi), errors="coerce"
+                ).dropna()
+
                 if not tuoi.empty:
                     self.sv_labels["tuoi_tb"].config(text=f"{np.mean(tuoi):.1f}")
                     self.sv_labels["tuoi_min"].config(text=str(int(np.min(tuoi))))
                     self.sv_labels["tuoi_max"].config(text=str(int(np.max(tuoi))))
+                else:
+                    for k in ("tuoi_tb", "tuoi_min", "tuoi_max"):
+                        self.sv_labels[k].config(text="Không có dữ liệu")
 
             # Theo lớp
             for row in self.lop_tree.get_children():

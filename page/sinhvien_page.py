@@ -34,6 +34,10 @@ class SinhvienPage(tk.Frame):
         super().__init__(master)
         self.app = app
         self.sv = SinhvienModel("data/sinhvien.csv", SV_COLS)
+        self.dm = SinhvienModel(
+            "data/diem.csv",
+            ['id', 'masv', 'hoten', 'diem_giua_ky', 'diem_cuoi_ky', 'diem_trung_binh', 'ghi_chu']
+        )
         self._view()
         self.load_data()
         self.pack(fill="both", expand=True)
@@ -188,6 +192,7 @@ class SinhvienPage(tk.Frame):
             else:
                 record["id"] = self.sv.get_next_id()
                 self.sv.create(record)
+                self._tao_diem_trong(masv, hoten)
 
             win.destroy()
             self.load_data()
@@ -206,6 +211,23 @@ class SinhvienPage(tk.Frame):
         btn_frame.grid(row=btn_row, column=0, columnspan=2, pady=15)
         tk.Button(btn_frame, text="💾 Lưu",  command=_luu,        width=12).pack(side="left", padx=6)
         tk.Button(btn_frame, text="❌ Hủy",  command=win.destroy, width=12).pack(side="left", padx=6)
+
+    def _tao_diem_trong(self, masv: str, hoten: str):
+        """Tạo bản ghi điểm trống cho sinh viên vừa được thêm mới."""
+        existing = self.dm.search("masv", masv)
+        exact = [r for r in existing if str(r.get("masv", "")).strip() == masv]
+        if exact:
+            return  # Đã có rồi, không thêm nữa
+        diem_record = {
+            "id":              self.dm.get_next_id(),
+            "masv":            masv,
+            "hoten":           hoten,
+            "diem_giua_ky":    "",
+            "diem_cuoi_ky":    "",
+            "diem_trung_binh": "",
+            "ghi_chu":         "Chưa có điểm",
+        }
+        self.dm.create(diem_record)
 
     # ── Tiện ích ──────────────────────────────────────────────────────────────
 
