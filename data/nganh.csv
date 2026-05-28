@@ -1,4 +1,6 @@
 id,ma_nganh,ten_nganh,mo_ta
-1,CNTT,Công nghệ Thông tin,Ngành CNTT
-2,QTKD,Quản trị Kinh doanh,Ngành QTKD
-3,KT,Kế toán,Ngành Kế toán
+1,CNTT,Công nghệ thông tin,
+2,QTKD,Quản trị kinh doanh,
+3,KT,Kế toán,
+4,DL,Du lịch,
+5,NN,Ngôn ngữ Anh,
