@@ -1,7 +1,8 @@
 import threading
 import tkinter as tk
 from tkinter import messagebox, ttk
-
+import os
+import webbrowser
 
 class AppManager:
 
@@ -69,7 +70,8 @@ class AppManager:
         tk.Button(
             nav, text="ℹ️ About", bg="#16a085", fg="white", relief="flat", font=("Arial", 9, "bold"), cursor="hand2", command=self._about
         ).pack(side="right", padx=10)
-
+        tk.Button(
+            nav, text="📖 Hướng dẫn", bg="#2980b9", fg="white", relief="flat", font=("Arial", 9, "bold"), cursor="hand2", command=self._open_guide).pack(side="right", padx=5)
     # ================= FOOTER =================
     def _build_footer(self):
         footer = tk.Label(
@@ -140,6 +142,18 @@ class AppManager:
             "-----------------------------------------\n"
             "Đơn vị: Trường Đại học Hạ Long"
         )
+
+    # ================= HƯỚNG DẪN =================
+    def _open_guide(self):
+        import os
+        import webbrowser
+
+        path = os.path.abspath("assets/huong_dan_su_dung.pdf")
+
+        if os.path.exists(path):
+            webbrowser.open(path)
+        else:
+            messagebox.showwarning("Thông báo", "Không tìm thấy file hướng dẫn!\nVui lòng kiểm tra thư mục assets/huong_dan_su_dung.pdf")
 
     # ================= LOADING =================
     def show_loading(self, text="Đang xử lý..."):
