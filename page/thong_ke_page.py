@@ -42,7 +42,7 @@ class ThongKePage(tk.Frame):
         ctrl.pack(fill="x", padx=15)
         
         tk.Label(ctrl, text="Chọn biểu đồ:", bg="white", font=("Arial", 11)).pack(side="left")
-        self.chart_type = ttk.Combobox(ctrl, values=["Phân loại học lực", "ĐTB theo lớp", "Phân bố điểm"], state="readonly", width=25)
+        self.chart_type = ttk.Combobox(ctrl, values=["Phân loại học lực", "ĐTB theo lớp"], state="readonly", width=25)
         self.chart_type.current(0)
         self.chart_type.pack(side="left", padx=10)
         ttk.Button(ctrl, text="Vẽ biểu đồ", command=self._draw_chart).pack(side="left")
@@ -107,13 +107,6 @@ class ThongKePage(tk.Frame):
             self.ax.set_title("Điểm trung bình theo lớp")
             self.ax.set_ylabel("ĐTB")
             self.ax.tick_params(axis="x", rotation=15)
-
-        # 3. PHÂN BỐ ĐIỂM (Histogram)
-        elif choice == "Phân bố điểm":
-            self.ax.hist(self.df["diem_trung_binh"].dropna(), bins=10)
-            self.ax.set_title("Phân bố điểm")
-            self.ax.set_xlabel("Điểm")
-            self.ax.set_ylabel("Số lượng")
 
         # Cập nhật render
         self.fig.tight_layout()
