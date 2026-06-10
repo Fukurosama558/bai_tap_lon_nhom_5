@@ -148,7 +148,7 @@ class AppManager:
         import os
         import webbrowser
 
-        path = os.path.abspath("assets/huong_dan_su_dung.pdf")
+        path = os.path.abspath("assets/HDSD.pdf")
 
         if os.path.exists(path):
             webbrowser.open(path)
